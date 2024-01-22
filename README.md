@@ -32,11 +32,11 @@ This project is a real-time collaboration note app built with React JS and Fireb
 2. Install dependencies:
 
     ```bash
-    cd realtime-note-app
+    cd mi-demo
     npm install
     ```
 
-3. Create a Firebase project and update `src/firebase.js` with your Firebase configuration.
+3. Create a Firebase project and update `src/Helpers/Firebase.ts` with your Firebase configuration.
 
 4. Start the development server:
 
