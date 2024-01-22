@@ -1,0 +1,110 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	font-family: 'Arial', sans-serif;
+	margin: 0;
+	padding: 0;
+	background-color: #f5f5f5;
+}
+
+.app {
+	padding: 20px;
+}
+
+.main-container {
+	display: flex;
+	justify-content: space-between;
+}
+
+.user-list {
+	background-color: #fff;
+	border: 1px solid #ddd;
+	padding: 20px;
+	width: 200px;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.user-list h2 {
+	font-size: 18px;
+	margin-bottom: 10px;
+}
+
+.user-list ul {
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+}
+
+.user-list li {
+	margin-bottom: 5px;
+}
+
+.note-container {
+	flex: 1;
+	background-color: #fff;
+	border: 1px solid #ddd;
+	padding: 20px;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.note-container h1 {
+	font-size: 24px;
+	margin-bottom: 20px;
+}
+
+.edit-box {
+	margin-bottom: 20px;
+}
+
+.edit-box input {
+	padding: 8px;
+	font-size: 14px;
+	margin-right: 10px;
+}
+
+.edit-box button {
+	padding: 8px 16px;
+	font-size: 14px;
+	background-color: #4caf50;
+	color: #fff;
+	border: none;
+	cursor: pointer;
+}
+
+.react-quill {
+	height: 300px;
+	border: 1px solid #ddd;
+	padding: 10px;
+}
+
+.react-quill .ql-editor {
+	font-size: 16px;
+}
+
+.react-quill .ql-toolbar {
+	border-bottom: 1px solid #ddd;
+	margin-bottom: 10px;
+}
+
+.history-container {
+	margin-top: 20px;
+	background-color: #fff;
+	border: 1px solid #ddd;
+	padding: 20px;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.history-container .title {
+	margin-bottom: 20px;
+}
+
+.history-container .content-container {
+	margin-bottom: 10px;
+}
+
+.history-container .content-container .content {
+	font-size: 14px;
+}
