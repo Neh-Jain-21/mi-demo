@@ -1,40 +1,63 @@
 import { useEffect, useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { Box, Button, Paper, TextField, Typography } from '@mui/material';
+import { useFormik } from 'formik';
+import * as yup from 'yup';
 import { DocumentData, addDoc, collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
+// COMPONENTS
+import ErrorMessage from './Components/ErrorMessage';
 // HELPERS
 import { db } from './Helpers/Firebase';
-// STYLES
-import './App.css';
 import { DATABASE_COLLECTIONS } from './Helpers/Constants';
+// STYLES
+import AppWrapper from './App.style';
 
 const App = () => {
-	const [note, setNote] = useState<string>('');
 	const [users, setUsers] = useState<DocumentData[]>([]);
 	const [history, setHistory] = useState<DocumentData[]>([]);
-	const [currentUserName, setCurrentUserName] = useState<string>('');
+
+	const formik = useFormik<{ userName: string; note: string }>({
+		initialValues: { userName: '', note: '' },
+		validationSchema: yup.object().shape({
+			userName: yup.string().required('Name is required!'),
+			note: yup.string().required('Note is required!')
+		}),
+		onSubmit: async (values) => {
+			const usersRef = collection(db, DATABASE_COLLECTIONS.USERS);
+			const notesRef = doc(db, DATABASE_COLLECTIONS.NOTES, 'note');
+			const historyRef = collection(db, DATABASE_COLLECTIONS.HISTORY);
+
+			const duplicateUser = users.find((user) => user.name === values.userName);
+
+			if (!duplicateUser) await addDoc(usersRef, { name: values.userName });
+
+			await setDoc(notesRef, { content: values.note, editedBy: values.userName });
+
+			await addDoc(historyRef, { content: values.note, editedBy: values.userName });
+		}
+	});
+
+	const { setFieldValue } = formik;
 
 	useEffect(() => {
 		const usersRef = collection(db, DATABASE_COLLECTIONS.USERS);
 		const historyRef = collection(db, DATABASE_COLLECTIONS.HISTORY);
 
-		// Listen for changes to users
 		const unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
 			const updatedUsers = snapshot.docs.map((doc) => doc.data());
 			setUsers(updatedUsers);
 		});
 
-		// Listen for changes to the note
 		const unsubscribeNote = onSnapshot(doc(db, DATABASE_COLLECTIONS.NOTES, 'note'), (doc) => {
 			const data = doc.data();
 
-			setNote(data ? data.content : '');
+			setFieldValue('note', data ? data.content : '');
 		});
 
-		// Listen for changes to users
 		const unsubscribeHistory = onSnapshot(historyRef, (snapshot) => {
 			const updatedHistory = snapshot.docs.map((doc) => doc.data());
-			setHistory(updatedHistory);
+			setHistory(updatedHistory.reverse());
 		});
 
 		return () => {
@@ -42,60 +65,64 @@ const App = () => {
 			unsubscribeNote();
 			unsubscribeHistory();
 		};
-	}, []);
+	}, [setFieldValue]);
 
-	const handleEditNote = async () => {
-		const usersRef = collection(db, DATABASE_COLLECTIONS.USERS);
-		const notesRef = doc(db, DATABASE_COLLECTIONS.NOTES, 'note');
-		const historyRef = collection(db, DATABASE_COLLECTIONS.HISTORY);
-
-		const duplicateUser = users.find((user) => user.name === currentUserName);
-
-		if (!duplicateUser) await addDoc(usersRef, { name: currentUserName });
-
-		await setDoc(notesRef, { content: note, editedBy: currentUserName });
-
-		await addDoc(historyRef, { content: note, editedBy: currentUserName });
-	};
-
-	const handleQuillChange = (value: string) => setNote(value);
+	const handleQuillChange = (value: string) => setFieldValue('note', value);
 
 	return (
-		<div className="app">
-			<div className="main-container">
-				<div className="user-list">
-					<h2>Users</h2>
+		<AppWrapper>
+			<Paper elevation={2} className="note-container">
+				<Typography component="h2" variant="h4" mb="20px">
+					Real-Time Note App
+				</Typography>
 
-					<ul>
-						{users.map((user) => (
-							<li key={user.name}>{user.name}</li>
-						))}
-					</ul>
-				</div>
+				<TextField
+					type="text"
+					size="small"
+					name="userName"
+					variant="outlined"
+					placeholder="Your Name"
+					onBlur={formik.handleBlur}
+					value={formik.values.userName}
+					onChange={formik.handleChange}
+				/>
+				<ErrorMessage text={(formik.touched.userName && formik.errors.userName) || ''} />
 
-				<div className="note-container">
-					<h1>Real-Time Note App</h1>
+				<ReactQuill value={formik.values.note} onChange={handleQuillChange} />
+				<ErrorMessage text={(formik.touched.note && formik.errors.note) || ''} />
 
-					<div className="edit-box">
-						<input type="text" placeholder="Your Name" value={currentUserName} onChange={(e) => setCurrentUserName(e.target.value)} />
-						<button onClick={handleEditNote}>Edit Note</button>
-					</div>
+				<Box className="edit-btn-container">
+					<Button color="success" disableElevation variant="contained" onClick={formik.submitForm}>
+						Edit Note
+					</Button>
+				</Box>
+			</Paper>
 
-					<ReactQuill value={note} onChange={handleQuillChange} />
-				</div>
-			</div>
+			<Paper elevation={2} className="user-list">
+				<Typography component="h2" variant="h4" mb="20px">
+					Users
+				</Typography>
 
-			<div className="history-container">
-				<h2 className="title">History</h2>
+				<ul>
+					{users.map((user) => (
+						<li key={user.name}>{user.name}</li>
+					))}
+				</ul>
+			</Paper>
 
-				{history.map((data) => (
-					<div className="content-container">
-						<h4>Edited by - {data.editedBy}</h4>
-						<h6 className="content" dangerouslySetInnerHTML={{ __html: data.content }} />
-					</div>
+			<Paper elevation={2} className="history-container">
+				<Typography component="h2" variant="h4" mb="20px">
+					Edit History
+				</Typography>
+
+				{history.map((data, index) => (
+					<Box key={index} className="content-container">
+						<Typography component="h4">Edited by - {data.editedBy}</Typography>
+						<Typography component="h5" className="content" dangerouslySetInnerHTML={{ __html: data.content }} />
+					</Box>
 				))}
-			</div>
-		</div>
+			</Paper>
+		</AppWrapper>
 	);
 };
 
