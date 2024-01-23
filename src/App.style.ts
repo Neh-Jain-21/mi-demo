@@ -35,6 +35,12 @@ const AppWrapper = styled(Box)`
 		.content-container {
 			margin-bottom: 10px;
 
+			.content-title-container {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+			}
+
 			.content {
 				font-size: 14px;
 			}

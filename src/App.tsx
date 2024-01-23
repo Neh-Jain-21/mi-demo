@@ -4,20 +4,24 @@ import 'react-quill/dist/quill.snow.css';
 import { Box, Button, Paper, TextField, Typography } from '@mui/material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import { DocumentData, addDoc, collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { DocumentData, addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 // COMPONENTS
-import ErrorMessage from './Components/ErrorMessage';
+import ErrorMessage from '@/Components/ErrorMessage';
 // HELPERS
-import { db } from './Helpers/Firebase';
-import { DATABASE_COLLECTIONS } from './Helpers/Constants';
+import { db } from '@/Helpers/Firebase';
+import { convertTimestamp } from '@/Helpers/Utils';
+import { DATABASE_COLLECTIONS } from '@/Helpers/Constants';
 // STYLES
-import AppWrapper from './App.style';
+import AppWrapper from '@/App.style';
+// TYPES
+import { AppForm } from '@/Types/App';
 
-const App = () => {
+const App = (): JSX.Element => {
 	const [users, setUsers] = useState<DocumentData[]>([]);
 	const [history, setHistory] = useState<DocumentData[]>([]);
+	const [isEdited, setIsEdited] = useState<boolean>(false);
 
-	const formik = useFormik<{ userName: string; note: string }>({
+	const formik = useFormik<AppForm>({
 		initialValues: { userName: '', note: '' },
 		validationSchema: yup.object().shape({
 			userName: yup.string().required('Name is required!'),
@@ -34,7 +38,9 @@ const App = () => {
 
 			await setDoc(notesRef, { content: values.note, editedBy: values.userName });
 
-			await addDoc(historyRef, { content: values.note, editedBy: values.userName });
+			await addDoc(historyRef, { content: values.note, editedBy: values.userName, createdAt: serverTimestamp() });
+
+			setIsEdited(false);
 		}
 	});
 
@@ -42,7 +48,7 @@ const App = () => {
 
 	useEffect(() => {
 		const usersRef = collection(db, DATABASE_COLLECTIONS.USERS);
-		const historyRef = collection(db, DATABASE_COLLECTIONS.HISTORY);
+		const historyRef = query(collection(db, DATABASE_COLLECTIONS.HISTORY), orderBy('createdAt'));
 
 		const unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
 			const updatedUsers = snapshot.docs.map((doc) => doc.data());
@@ -51,7 +57,6 @@ const App = () => {
 
 		const unsubscribeNote = onSnapshot(doc(db, DATABASE_COLLECTIONS.NOTES, 'note'), (doc) => {
 			const data = doc.data();
-
 			setFieldValue('note', data ? data.content : '');
 		});
 
@@ -67,7 +72,10 @@ const App = () => {
 		};
 	}, [setFieldValue]);
 
-	const handleQuillChange = (value: string) => setFieldValue('note', value);
+	const handleQuillChange = (value: string) => {
+		setIsEdited(true);
+		setFieldValue('note', value);
+	};
 
 	return (
 		<AppWrapper>
@@ -76,26 +84,28 @@ const App = () => {
 					Real-Time Note App
 				</Typography>
 
-				<TextField
-					type="text"
-					size="small"
-					name="userName"
-					variant="outlined"
-					placeholder="Your Name"
-					onBlur={formik.handleBlur}
-					value={formik.values.userName}
-					onChange={formik.handleChange}
-				/>
-				<ErrorMessage text={(formik.touched.userName && formik.errors.userName) || ''} />
+				<form onSubmit={isEdited ? formik.handleSubmit : (event) => event.preventDefault()}>
+					<TextField
+						type="text"
+						size="small"
+						name="userName"
+						variant="outlined"
+						placeholder="Your Name"
+						onBlur={formik.handleBlur}
+						value={formik.values.userName}
+						onChange={formik.handleChange}
+					/>
+					<ErrorMessage text={(formik.touched.userName && formik.errors.userName) || ''} />
 
-				<ReactQuill value={formik.values.note} onChange={handleQuillChange} />
-				<ErrorMessage text={(formik.touched.note && formik.errors.note) || ''} />
+					<ReactQuill value={formik.values.note} onChange={handleQuillChange} />
+					<ErrorMessage text={(formik.touched.note && formik.errors.note) || ''} />
 
-				<Box className="edit-btn-container">
-					<Button color="success" disableElevation variant="contained" onClick={formik.submitForm}>
-						Edit Note
-					</Button>
-				</Box>
+					<Box className="edit-btn-container">
+						<Button color="success" disableElevation variant="contained" type="submit">
+							Edit Note
+						</Button>
+					</Box>
+				</form>
 			</Paper>
 
 			<Paper elevation={2} className="user-list">
@@ -117,7 +127,14 @@ const App = () => {
 
 				{history.map((data, index) => (
 					<Box key={index} className="content-container">
-						<Typography component="h4">Edited by - {data.editedBy}</Typography>
+						<Box className="content-title-container">
+							<Typography component="h4">Edited by - {data.editedBy}</Typography>
+
+							<Typography component="p" fontSize="14px">
+								{data?.createdAt ? convertTimestamp(data.createdAt) : ''}
+							</Typography>
+						</Box>
+
 						<Typography component="h5" className="content" dangerouslySetInnerHTML={{ __html: data.content }} />
 					</Box>
 				))}
